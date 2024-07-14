@@ -74,9 +74,9 @@ def host_print_pretty(host, history=False):
     for banner in sorted(host['data'], key=lambda k: k['port']):
         product = ''
         version = ''
-        if 'product' in banner and banner['product']:
+        if banner.get('product'):
             product = banner['product']
-        if 'version' in banner and banner['version']:
+        if banner.get('version'):
             version = '({})'.format(banner['version'])
 
         click.echo(click.style('{:>7d}'.format(banner['port']), fg='cyan'), nl=False)
