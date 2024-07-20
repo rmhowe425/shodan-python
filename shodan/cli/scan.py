@@ -18,9 +18,9 @@ def scan():
 
 
 @scan.command(name='list')
-def scan_list():
+@get_api_key
+def scan_list(key):
     """Show recently launched scans"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -50,9 +50,9 @@ def scan_list():
 @click.option('--quiet', help='Disable the printing of information to the screen.', default=False, is_flag=True)
 @click.argument('port', type=int)
 @click.argument('protocol', type=str)
-def scan_internet(quiet, port, protocol):
+@get_api_key
+def scan_internet(quiet, port, protocol, key):
     """Scan the Internet for a specific port and protocol using the Shodan infrastructure."""
-    key = get_api_key()
     api = shodan.Shodan(key)
 
     try:
@@ -117,9 +117,9 @@ def scan_internet(quiet, port, protocol):
 
 
 @scan.command(name='protocols')
-def scan_protocols():
+@get_api_key
+def scan_protocols(key):
     """List the protocols that you can scan with using Shodan."""
-    key = get_api_key()
     api = shodan.Shodan(key)
     try:
         protocols = api.protocols()
@@ -131,14 +131,16 @@ def scan_protocols():
 
 
 @scan.command(name='submit')
-@click.option('--wait', help='How long to wait for results to come back. If this is set to "0" or below return immediately.', default=20, type=int)
+@click.option('--wait', help='How long to wait for results to come back. If this is set to "0" '
+                             'or below return immediately.', default=20, type=int
+              )
 @click.option('--filename', help='Save the results in the given file.', default='', type=str)
 @click.option('--force', default=False, is_flag=True)
 @click.option('--verbose', default=False, is_flag=True)
 @click.argument('netblocks', metavar='<ip address>', nargs=-1)
-def scan_submit(wait, filename, force, verbose, netblocks):
+@get_api_key
+def scan_submit(wait, filename, force, verbose, netblocks, key):
     """Scan an IP/ netblock using Shodan."""
-    key = get_api_key()
     api = shodan.Shodan(key)
     alert = None
 
@@ -146,7 +148,6 @@ def scan_submit(wait, filename, force, verbose, netblocks):
     try:
         # Submit the scan
         scan = api.scan(netblocks, force=force)
-
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
         click.echo('')
@@ -158,9 +159,11 @@ def scan_submit(wait, filename, force, verbose, netblocks):
         # Return immediately
         if wait <= 0:
             click.echo('Scan ID: {}'.format(scan['id']))
-            click.echo('Exiting now, not waiting for results. Use the API or website to retrieve the results of the scan.')
+            click.echo('Exiting now, not waiting for results. Use the API or website to retrieve the '
+                       'results of the scan.'
+                       )
         else:
-            # Setup an alert to wait for responses
+            # Set up an alert to wait for responses
             alert = api.create_alert('Scan: {}'.format(', '.join(netblocks)), netblocks)
 
             # Create the output file if necessary
@@ -195,7 +198,8 @@ def scan_submit(wait, filename, force, verbose, netblocks):
                             hosts[helpers.get_ip(banner)][banner['port']] = banner
                             cache[cache_key] = True
 
-                        # If we've grabbed data for more than 60 seconds it might just be a busy network and we should move on
+                        # If we've grabbed data for more than 60 seconds it might just be a busy network
+                        # and we should move on
                         if time.time() - scan_start >= 60:
                             scan = api.scan_status(scan['id'])
 
@@ -332,9 +336,9 @@ def scan_submit(wait, filename, force, verbose, netblocks):
 
 @scan.command(name='status')
 @click.argument('scan_id', type=str)
-def scan_status(scan_id):
+@get_api_key
+def scan_status(scan_id, key):
     """Check the status of an on-demand scan."""
-    key = get_api_key()
     api = shodan.Shodan(key)
     try:
         scan = api.scan_status(scan_id)
