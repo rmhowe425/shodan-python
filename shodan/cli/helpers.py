@@ -8,6 +8,7 @@ import itertools
 import os
 import sys
 from ipaddress import ip_network, ip_address
+from functools import wraps
 
 from .settings import SHODAN_CONFIG_DIR
 
@@ -17,22 +18,27 @@ except NameError:
     basestring = (str, )  # Python 3
 
 
-def get_api_key():
-    '''Returns the API key of the current logged-in user.'''
-    shodan_dir = os.path.expanduser(SHODAN_CONFIG_DIR)
-    keyfile = shodan_dir + '/api_key'
+def get_api_key(func):
 
-    # If the file doesn't yet exist let the user know that they need to
-    # initialize the shodan cli
-    if not os.path.exists(keyfile):
-        raise click.ClickException('Please run "shodan init <api key>" before using this command')
+    @wraps(func)
+    def decorator(*args, **kwargs):
+        shodan_dir = os.path.expanduser(SHODAN_CONFIG_DIR)
+        keyfile = shodan_dir + '/api_key'
 
-    # Make sure it is a read-only file
-    if not oct(os.stat(keyfile).st_mode).endswith("600"):
-        os.chmod(keyfile, 0o600)
+        # If the file doesn't yet exist let the user know that they need to
+        # initialize the shodan cli
+        if not os.path.exists(keyfile):
+            raise click.ClickException('Please run "shodan init <api key>" before using this command')
 
-    with open(keyfile, 'r') as fin:
-        return fin.read().strip()
+        # Make sure it is a read-only file
+        if not oct(os.stat(keyfile).st_mode).endswith("600"):
+            os.chmod(keyfile, 0o600)
+
+        with open(keyfile, 'r') as fin:
+            passwd = fin.read().strip()
+
+        return func(key=passwd, **kwargs)
+    return decorator
 
 
 def escape_data(args):

@@ -10,12 +10,12 @@ def org():
     pass
 
 
-@org.command()
+@org.command(name='add')
 @click.option('--silent', help="Don't send a notification to the user", default=False, is_flag=True)
 @click.argument('user', metavar='<username or email>')
-def add(silent, user):
+@get_api_key
+def add(silent, user, key):
     """Add a new member"""
-    key = get_api_key()
     api = shodan.Shodan(key)
 
     try:
@@ -26,10 +26,10 @@ def add(silent, user):
     click.secho('Successfully added the new member', fg='green')
 
 
-@org.command()
-def info():
+@org.command(name='info')
+@get_api_key
+def info(key):
     """Show an overview of the organization"""
-    key = get_api_key()
     api = shodan.Shodan(key)
     try:
         organization = api.org.info()
@@ -65,11 +65,11 @@ def info():
         click.secho('No members yet', dim=True)
 
 
-@org.command()
+@org.command(name='remove')
 @click.argument('user', metavar='<username or email>')
-def remove(user):
+@get_api_key
+def remove(user, key):
     """Remove and downgrade a member"""
-    key = get_api_key()
     api = shodan.Shodan(key)
 
     try:

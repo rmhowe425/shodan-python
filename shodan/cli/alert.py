@@ -82,9 +82,9 @@ def alert():
 
 
 @alert.command(name='clear')
-def alert_clear():
+@get_api_key
+def alert_clear(key):
     """Remove all alerts"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -101,9 +101,9 @@ def alert_clear():
 @alert.command(name='create')
 @click.argument('name', metavar='<name>')
 @click.argument('netblocks', metavar='<netblocks>', nargs=-1)
-def alert_create(name, netblocks):
+@get_api_key
+def alert_create(name, netblocks, key):
     """Create a network alert to monitor an external network"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -118,12 +118,15 @@ def alert_create(name, netblocks):
 
 @alert.command(name='domain')
 @click.argument('domain', metavar='<domain>', type=str)
-@click.option('--triggers', help='List of triggers to enable', default='malware,industrial_control_system,internet_scanner,iot,open_database,new_service,ssl_expired,vulnerable')
-def alert_domain(domain, triggers):
+@click.option('--triggers', help='List of triggers to enable',
+              default='malware,industrial_control_system,internet_scanner,iot,open_database,new_service,'
+                      'ssl_expired,vulnerable'
+              )
+@get_api_key
+def alert_domain(domain, triggers, key):
     """Create a network alert based on a domain name"""
-    key = get_api_key()
-
     api = shodan.Shodan(key)
+
     try:
         # Grab a list of IPs for the domain
         domain = domain.lower()
@@ -160,9 +163,9 @@ def alert_domain(domain, triggers):
 @alert.command(name='download')
 @click.argument('filename', metavar='<filename>', type=str)
 @click.option('--alert-id', help='Specific alert ID to download the data of', default=None)
-def alert_download(filename, alert_id):
+@get_api_key
+def alert_download(filename, alert_id, key):
     """Download all information for monitored networks/ IPs."""
-    key = get_api_key()
 
     api = shodan.Shodan(key)
     ips = set()
@@ -181,7 +184,7 @@ def alert_download(filename, alert_id):
             alerts = [api.alerts(aid=alert_id.strip())]
         else:
             alerts = api.alerts()
-        
+
         click.echo('Compiling list of networks/ IPs to download...')
         for alert in alerts:
             for net in alert['filters']['ip']:
@@ -189,7 +192,7 @@ def alert_download(filename, alert_id):
                     networks.add(net)
                 else:
                     ips.add(net)
-        
+
         click.echo('Downloading...')
         with open_file(filename) as fout:
             # Check if the user is able to use batch IP lookups
@@ -198,7 +201,7 @@ def alert_download(filename, alert_id):
                 api_info = api.info()
                 if api_info['plan'] in ['corp', 'stream-100']:
                     batch_size = 100
-            
+
             # Convert it to a list so we can index into it
             ips = list(ips)
 
@@ -209,14 +212,14 @@ def alert_download(filename, alert_id):
                     results = api.host(ip)
                     if not isinstance(results, list):
                         results = [results]
-                    
+
                     for host in results:
                         for banner in host['data']:
                             write_banner(fout, banner)
                 except APIError:
                     pass
                 sleep(1)  # Slow down a bit to make sure we don't hit the rate limit
-            
+
             # Grab all the network ranges
             for net in networks:
                 try:
@@ -224,7 +227,7 @@ def alert_download(filename, alert_id):
                     click.echo(net)
                     for banner in api.search_cursor('net:{}'.format(net)):
                         write_banner(fout, banner)
-                        
+
                         # Slow down a bit to make sure we don't hit the rate limit
                         if counter % 100 == 0:
                             sleep(1)
@@ -233,16 +236,16 @@ def alert_download(filename, alert_id):
                     pass
     except shodan.APIError as e:
         raise click.ClickException(e.value)
-    
+
     click.secho('Successfully downloaded results into: {}'.format(filename), fg='green')
 
 
 @alert.command(name='export')
 @click.option('--filename', help='Name of the output file', default='shodan-alerts.json.gz', type=str)
-def alert_export(filename):
+@get_api_key
+def alert_export(filename, key):
     """Export the configuration of monitored networks/ IPs to be used by ``shodan alert import``."""
-    # Setup the API wrapper
-    key = get_api_key()
+    # Set up the API wrapper
     api = shodan.Shodan(key)
 
     try:
@@ -256,16 +259,16 @@ def alert_export(filename):
             json.dump(alerts, fout)
     except Exception as e:
         raise click.ClickException(e.value)
-    
+
     click.secho('Successfully exported monitored networks', fg='green')
 
 
 @alert.command(name='import')
 @click.argument('filename', metavar='<export file>')
-def alert_import(filename):
+@get_api_key
+def alert_import(filename, key):
     """Export the configuration of monitored networks/ IPs to be used by ``shodan alert import``."""
-    # Setup the API wrapper
-    key = get_api_key()
+    # Set up the API wrapper
     api = shodan.Shodan(key)
 
     # A mapping of the old notifier IDs to the new ones
@@ -293,7 +296,7 @@ def alert_import(filename):
                         if info.get('ignore', []):
                             for whitelist in info['ignore']:
                                 api.ignore_alert_trigger_notification(alert['id'], trigger, whitelist['ip'], whitelist['port'])
-                
+
                 # Enable the notifiers
                 for prev_notifier in item.get('notifiers', []):
                     # We don't need to do anything for the default notifier as that
@@ -303,7 +306,7 @@ def alert_import(filename):
 
                     # Get the new notifier based on the ID of the old one
                     notifier = notifier_map.get(prev_notifier['id'])
-                    
+
                     # Create the notifier if it doesn't yet exist
                     if notifier is None:
                         notifier = api.notifier.create(prev_notifier['provider'], prev_notifier['args'], description=prev_notifier['description'])
@@ -314,15 +317,15 @@ def alert_import(filename):
                     api.add_alert_notifier(alert['id'], notifier['id'])
     except Exception as e:
         raise click.ClickException(e.value)
-    
+
     click.secho('Successfully imported monitored networks', fg='green')
 
 
 @alert.command(name='info')
 @click.argument('alert', metavar='<alert id>')
-def alert_info(alert):
+@get_api_key
+def alert_info(alert, key):
     """Show information about a specific alert"""
-    key = get_api_key()
     api = shodan.Shodan(key)
 
     try:
@@ -356,9 +359,9 @@ def alert_info(alert):
 
 @alert.command(name='list')
 @click.option('--expired', help='Whether or not to show expired alerts.', default=True, type=bool)
-def alert_list(expired):
+@get_api_key
+def alert_list(key, expired):
     """List all the active alerts"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -396,10 +399,10 @@ def alert_list(expired):
 @click.option('--limit', help='The number of results to return.', default=10, type=int)
 @click.option('--filename', '-O', help='Save the results in a CSV file of the provided name.', default=None)
 @click.argument('facets', metavar='<facets ...>', nargs=-1)
-def alert_stats(limit, filename, facets):
+@get_api_key
+def alert_stats(limit, filename, facets, key):
     """Show summary information about your monitored networks"""
     # Setup Shodan
-    key = get_api_key()
     api = shodan.Shodan(key)
 
     # Make sure the user didn't supply an empty string
@@ -483,9 +486,9 @@ def alert_stats(limit, filename, facets):
 
 @alert.command(name='remove')
 @click.argument('alert_id', metavar='<alert ID>')
-def alert_remove(alert_id):
+@get_api_key
+def alert_remove(alert_id, key):
     """Remove the specified alert"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -496,10 +499,10 @@ def alert_remove(alert_id):
     click.echo("Alert deleted")
 
 
+@get_api_key
 @alert.command(name='triggers')
-def alert_list_triggers():
+def alert_list_triggers(key):
     """List the available notification triggers"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -530,9 +533,9 @@ def alert_list_triggers():
 @alert.command(name='enable')
 @click.argument('alert_id', metavar='<alert ID>')
 @click.argument('trigger', metavar='<trigger name>')
-def alert_enable_trigger(alert_id, trigger):
+@get_api_key
+def alert_enable_trigger(alert_id, trigger, key):
     """Enable a trigger for the alert"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)
@@ -547,9 +550,9 @@ def alert_enable_trigger(alert_id, trigger):
 @alert.command(name='disable')
 @click.argument('alert_id', metavar='<alert ID>')
 @click.argument('trigger', metavar='<trigger name>')
-def alert_disable_trigger(alert_id, trigger):
+@get_api_key
+def alert_disable_trigger(alert_id, trigger, key):
     """Disable a trigger for the alert"""
-    key = get_api_key()
 
     # Get the list
     api = shodan.Shodan(key)

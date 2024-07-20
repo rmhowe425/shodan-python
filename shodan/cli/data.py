@@ -14,10 +14,10 @@ def data():
 
 @data.command(name='list')
 @click.option('--dataset', help='See the available files in the given dataset', default=None, type=str)
-def data_list(dataset):
+@get_api_key
+def data_list(dataset, key):
     """List available datasets or the files within those datasets."""
-    # Setup the API connection
-    key = get_api_key()
+    # Set up the API connection
     api = shodan.Shodan(key)
 
     if dataset:
@@ -43,13 +43,17 @@ def data_list(dataset):
 
 
 @data.command(name='download')
-@click.option('--chunksize', help='The size of the chunks that are downloaded into memory before writing them to disk.', default=1024, type=int)
+@click.option('--chunksize', help='The size of the chunks that are downloaded into memory before '
+                                  'writing them to disk.',
+              default=1024, type=int
+              )
 @click.option('--filename', '-O', help='Save the file as the provided filename instead of the default.')
 @click.argument('dataset', metavar='<dataset>')
 @click.argument('name', metavar='<file>')
-def data_download(chunksize, filename, dataset, name):
-    # Setup the API connection
-    key = get_api_key()
+@get_api_key
+def data_download(chunksize, filename, dataset, name, key):
+    """Download a dataset, or a file within a dataset."""
+    # Set up the API connection
     api = shodan.Shodan(key)
 
     # Get the file object that the user requested which will contain the URL and total file size
