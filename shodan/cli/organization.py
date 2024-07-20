@@ -1,7 +1,7 @@
 import click
 import shodan
 
-from shodan.cli.helpers import get_api_key, humanize_api_plan
+from shodan.cli.helpers import get_shodan_inst, humanize_api_plan
 
 
 @click.group()
@@ -13,11 +13,9 @@ def org():
 @org.command(name='add')
 @click.option('--silent', help="Don't send a notification to the user", default=False, is_flag=True)
 @click.argument('user', metavar='<username or email>')
-@get_api_key
-def add(silent, user, key):
+@get_shodan_inst
+def add(silent, user, api):
     """Add a new member"""
-    api = shodan.Shodan(key)
-
     try:
         api.org.add_member(user, notify=not silent)
     except shodan.APIError as e:
@@ -27,10 +25,9 @@ def add(silent, user, key):
 
 
 @org.command(name='info')
-@get_api_key
-def info(key):
+@get_shodan_inst
+def info(api):
     """Show an overview of the organization"""
-    api = shodan.Shodan(key)
     try:
         organization = api.org.info()
     except shodan.APIError as e:
@@ -67,11 +64,9 @@ def info(key):
 
 @org.command(name='remove')
 @click.argument('user', metavar='<username or email>')
-@get_api_key
-def remove(user, key):
+@get_shodan_inst
+def remove(user, api):
     """Remove and downgrade a member"""
-    api = shodan.Shodan(key)
-
     try:
         api.org.remove_member(user)
     except shodan.APIError as e:

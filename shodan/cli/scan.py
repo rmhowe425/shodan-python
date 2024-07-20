@@ -7,7 +7,7 @@ import socket
 import threading
 import time
 
-from shodan.cli.helpers import get_api_key, async_spinner
+from shodan.cli.helpers import get_shodan_inst, async_spinner
 from shodan.cli.settings import COLORIZE_FIELDS
 
 
@@ -18,12 +18,9 @@ def scan():
 
 
 @scan.command(name='list')
-@get_api_key
-def scan_list(key):
+@get_shodan_inst
+def scan_list(api):
     """Show recently launched scans"""
-
-    # Get the list
-    api = shodan.Shodan(key)
     try:
         scans = api.scans()
     except shodan.APIError as e:
@@ -50,11 +47,9 @@ def scan_list(key):
 @click.option('--quiet', help='Disable the printing of information to the screen.', default=False, is_flag=True)
 @click.argument('port', type=int)
 @click.argument('protocol', type=str)
-@get_api_key
-def scan_internet(quiet, port, protocol, key):
+@get_shodan_inst
+def scan_internet(quiet, port, protocol, api):
     """Scan the Internet for a specific port and protocol using the Shodan infrastructure."""
-    api = shodan.Shodan(key)
-
     try:
         # Submit the request to Shodan
         click.echo('Submitting Internet scan to Shodan...', nl=False)
@@ -117,10 +112,9 @@ def scan_internet(quiet, port, protocol, key):
 
 
 @scan.command(name='protocols')
-@get_api_key
-def scan_protocols(key):
+@get_shodan_inst
+def scan_protocols(api):
     """List the protocols that you can scan with using Shodan."""
-    api = shodan.Shodan(key)
     try:
         protocols = api.protocols()
 
@@ -138,10 +132,9 @@ def scan_protocols(key):
 @click.option('--force', default=False, is_flag=True)
 @click.option('--verbose', default=False, is_flag=True)
 @click.argument('netblocks', metavar='<ip address>', nargs=-1)
-@get_api_key
-def scan_submit(wait, filename, force, verbose, netblocks, key):
+@get_shodan_inst
+def scan_submit(wait, filename, force, verbose, netblocks, api):
     """Scan an IP/ netblock using Shodan."""
-    api = shodan.Shodan(key)
     alert = None
 
     # Submit the IPs for scanning
@@ -336,10 +329,9 @@ def scan_submit(wait, filename, force, verbose, netblocks, key):
 
 @scan.command(name='status')
 @click.argument('scan_id', type=str)
-@get_api_key
-def scan_status(scan_id, key):
+@get_shodan_inst
+def scan_status(scan_id, api):
     """Check the status of an on-demand scan."""
-    api = shodan.Shodan(key)
     try:
         scan = api.scan_status(scan_id)
         click.echo(scan['status'])

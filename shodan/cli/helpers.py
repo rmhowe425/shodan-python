@@ -7,6 +7,7 @@ import gzip
 import itertools
 import os
 import sys
+from shodan import Shodan
 from ipaddress import ip_network, ip_address
 from functools import wraps
 
@@ -18,7 +19,7 @@ except NameError:
     basestring = (str, )  # Python 3
 
 
-def get_api_key(func):
+def get_shodan_inst(func):
 
     @wraps(func)
     def decorator(*args, **kwargs):
@@ -35,9 +36,10 @@ def get_api_key(func):
             os.chmod(keyfile, 0o600)
 
         with open(keyfile, 'r') as fin:
-            passwd = fin.read().strip()
+            key = fin.read().strip()
 
-        return func(key=passwd, **kwargs)
+        shodan_inst = Shodan(key=key)
+        return func(api=shodan_inst, **kwargs)
     return decorator
 
 

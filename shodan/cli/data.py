@@ -3,7 +3,7 @@ import requests
 import shodan
 import shodan.helpers as helpers
 
-from shodan.cli.helpers import get_api_key
+from shodan.cli.helpers import get_shodan_inst
 
 
 @click.group()
@@ -14,12 +14,9 @@ def data():
 
 @data.command(name='list')
 @click.option('--dataset', help='See the available files in the given dataset', default=None, type=str)
-@get_api_key
-def data_list(dataset, key):
+@get_shodan_inst
+def data_list(dataset, api):
     """List available datasets or the files within those datasets."""
-    # Set up the API connection
-    api = shodan.Shodan(key)
-
     if dataset:
         # Show the files within this dataset
         files = api.data.list_files(dataset)
@@ -50,12 +47,9 @@ def data_list(dataset, key):
 @click.option('--filename', '-O', help='Save the file as the provided filename instead of the default.')
 @click.argument('dataset', metavar='<dataset>')
 @click.argument('name', metavar='<file>')
-@get_api_key
-def data_download(chunksize, filename, dataset, name, key):
+@get_shodan_inst
+def data_download(chunksize, filename, dataset, name, api):
     """Download a dataset, or a file within a dataset."""
-    # Set up the API connection
-    api = shodan.Shodan(key)
-
     # Get the file object that the user requested which will contain the URL and total file size
     file = None
     try:
